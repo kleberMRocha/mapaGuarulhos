@@ -1292,3 +1292,87 @@ const guarulhosCoordinates = [
         ]
     ]
 ]
+
+
+const map = L.map('map', {
+    center: L.latLng(-23.4542, -46.5337),
+    zoom: 11,
+    zoomControl: true
+});
+
+map.scrollWheelZoom.disable();
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+
+map.setView([-23.4542, -46.5337], 11);
+
+
+var polygons = L.polygon(guarulhosCoordinates);
+
+var gru = polygons.toGeoJSON();
+
+
+fetch('https://apiprevmet3.inmet.gov.br/avisos/ativos')
+    .then(e => e.json())
+    .then((e) => {
+        const { hoje } = e;
+
+        if (hoje.length === 0) {
+            L.polygon(gru.geometry.coordinates[0], {
+                color: '#1D2D4E',
+                fillColor: '#1D2D4E',
+                fillOpacity: 0.5,
+                weight: 1,
+            }).addTo(map);
+            return;
+        }
+
+        hoje.forEach((el) => {
+
+            const geocodesGuarulhos = '3518800';
+
+
+            const alertaGuarulhos = el.geocodes.split(',').find(id => {
+                return id === geocodesGuarulhos;
+            });
+
+            if (alertaGuarulhos) {
+
+                const desc = document.querySelector('#desc');
+
+                const p = document.createElement('p');
+                p.innerHTML = `  <p style="background:${el.aviso_cor}; border-radius: 4px; padding: 8px"> 
+               <b> Descricao: ${el.descricao} </b><br/><br/> Riscos: ${el.riscos.map(r => r)}<br /><br />
+                instrucoes:  ${el.instrucoes.map(r => r)}  <br /><br />
+                </p>`;
+
+                desc.appendChild(p);
+
+
+                L.polygon(gru.geometry.coordinates[0], {
+                    color: el.aviso_cor,
+                    fillColor: el.aviso_cor,
+                    fillOpacity: 0.5,
+                    weight: 1,
+                })
+                    .bindPopup(`<b>${el.descricao}</b><br>${el.riscos.map((e) => e)}<br/> <a target='_blank' href='https://alertas2.inmet.gov.br/${el.id}''>Clique aqui</a>`)
+                    .addTo(map);
+            }
+
+
+        })
+
+    }).catch(e => {
+        L.polygon(gru.geometry.coordinates[0], {
+            color: '#1D2D4E',
+            fillColor: '#1D2D4E',
+            fillOpacity: 0.5,
+            weight: 1,
+        }).addTo(map);
+    }).finally(e => {
+        const loader = document.querySelector('#loader');
+        loader.style.display = 'none';
+    })
